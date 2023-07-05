@@ -1,0 +1,413 @@
+---
+title: "Phagocytosis"
+author: "Shakir Suleimanov"
+date: "2023-06-02"
+output:
+  html_document:
+    code_folding: hide
+    toc: yes
+    toc_float: true
+    toc_depth: 3
+    theme: cerulean
+    keep_md: true
+---
+
+
+##Normalized data for flow cytometry - percent of phagocytosis
+
+
+```r
+flow_cytometry_percents_10_1 <- read_excel("Database.xlsx", sheet = "%pos_flow_cytometry")
+
+flow_cytometry_percents_scaling_10_1_for_clusters <- flow_cytometry_percents_10_1 %>%
+  filter(!Group == "Experiment4") %>%
+  dplyr::select(is.numeric) %>%
+  t() %>%
+  scale()
+  
+flow_cytometry_percents_scaling_10_1 <- flow_cytometry_percents_10_1 %>%
+  filter(!Group == "Experiment4") %>%
+  dplyr::select(is.numeric) %>%
+  t() %>%
+  scale() %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  rowwise() %>%
+  mutate(average_scale = mean(c_across(contains("V")))) %>%
+  mutate(rowname = as.factor(rowname))
+
+colnames(flow_cytometry_percents_scaling_10_1) <- c("Group", "Experiment1", "Experiment2", "Experiment3", "Experiment4", "Average")
+
+flow_cytometry_percents_scaling_10_1_ANOVA <- flow_cytometry_percents_scaling_10_1 %>%
+  pivot_longer(!Group & !Average)
+
+tiff("Figures/boxplot_flow_cytometry_percents_norm.tiff", width = 6, height = 4, units = 'in', res = 360, compression = 'none')
+phm_fc_percents <- pheatmap(flow_cytometry_percents_scaling_10_1_for_clusters, cluster_col = TRUE, show_colnames = TRUE, annotation_names_row = T, fontsize_col = 8, cutree_rows = 2)
+dev.off()
+```
+
+
+```r
+ANOVA_perc_flow_cytometry <- aov(value ~ Group, data = flow_cytometry_percents_scaling_10_1_ANOVA) %>% glht(linfct = mcp(Group = "Tukey")) %>% summary()
+
+ANOVA_perc_flow_cytometry
+
+aov(value ~ Group, data = flow_cytometry_percents_scaling_10_1_ANOVA) %>% summary()
+```
+
+#Bubbleplot for percents flow cytometry
+
+```r
+plot_for_bubblegum_fc_10_1_scaled <- flow_cytometry_percents_scaling_10_1 %>%
+  pivot_longer(!Group) %>%
+  filter(name == "Average")
+  
+bubblegum_plot_perc_flow_cytometry_10_1 <- ggplot(plot_for_bubblegum_fc_10_1_scaled, aes(x = Group, y = name, fill = value, size = value)) +
+  geom_point(alpha = 0.8, shape = 21, stroke = 0) +
+  #geom_hline(yintercept = seq(.5, 4.5, 1), size = .2) +
+  scale_x_discrete(position = "bottom") +
+  scale_radius(range = c(5, 40), breaks = c(-1, 0, 1), labels = c(-1, 0, 1), limits = c(-2, 2)) +
+  scale_fill_gradient(low = "orange", high = "blue", breaks = c(-2, 0, 2), labels = c("Low", "Middle", "High"), limits = c(-2, 2)) +
+  theme_ipsum() +
+  theme(legend.position = "bottom", 
+        panel.grid.major = element_blank(),
+        legend.text = element_text(size = 14, family="Arial"),
+        legend.title = element_text(size = 14, family="Arial"),
+        axis.text = element_text(size = 14, family = "Arial"), axis.text.x=element_text(angle = 45, hjust = 0.9)) +
+  guides(size = guide_legend(override.aes = list(fill = "grey", alpha = 0.5, color = "black", stroke = .25), label.position = "bottom",title.position = "left", order = 1), fill = guide_colorbar(ticks.colour = NA, title.position = "top", order = 2)) +
+  labs(size = "z-scores", fill = "Level of phagocytosis:", x = NULL, y = NULL)
+
+bubblegum_plot_perc_flow_cytometry_10_1 
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
+```r
+ggsave("Figures/bg_plot_fc_norm_total_perc.tiff")
+ggsave("Figures/bg_plot_fc_norm_total_perc.jpeg")
+```
+
+## Supplementary materials. percent flow cytometry with boxplots 
+
+
+```r
+data_M1_MCSF_GM_CSF <- read_excel("Database.xlsx", sheet = "%pos_flow_cytometry")
+
+perc_pos_flow_cytometry_for_boxplot <- data_M1_MCSF_GM_CSF %>%
+  filter(!Group == "Experiment4") %>%
+  dplyr::select(-Date & -Ratio) %>%
+  pivot_longer(!Group) %>%
+  mutate(name = as.factor(name))
+  
+boxplot_perc_pos_flow_cytometry <- ggplot(perc_pos_flow_cytometry_for_boxplot, aes(x = name, y = value, fill = name)) +
+  geom_boxplot(alpha = 0.6) +
+  geom_point(size = 3) +
+  scale_fill_manual(breaks = perc_pos_flow_cytometry_for_boxplot$name,
+                    values = c("purple", "blue", "orange", "red")) +
+  theme(axis.title.x=element_blank(), axis.text.y=element_text(angle=0,hjust=0.5,vjust=0.4, size = 18),
+axis.text.x=element_text(angle=0,hjust=0.5,vjust=0.4, size = 18),
+        legend.text = element_text(size = 18, family="Arial"),
+        legend.title = element_text(size = 18, family="Arial"))
+
+boxplot_perc_pos_flow_cytometry
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+
+```r
+model_percent_flow_cytometry <- aov(value ~ name, data = perc_pos_flow_cytometry_for_boxplot) %>% glht(linfct = mcp(name = "Tukey")) %>% summary()
+
+model_percent_flow_cytometry
+
+ggsave("Figures/boxplot_perc_pos_flow_cytometry.tiff")
+ggsave("Figures/boxplot_perc_pos_flow_cytometry.jpeg")
+```
+
+
+##Normalized data for flow cytometry - MFI
+
+
+```r
+flow_cytometry_MFI_10_1 <- read_excel("Database.xlsx", sheet = "MFI_flow_cytometry")
+
+flow_cytometry_MFI_scaling_10_1_for_clusters <- flow_cytometry_MFI_10_1 %>%
+  filter(!Group == "Experiment4") %>%
+  dplyr::select(is.numeric) %>%
+  t() %>%
+  scale()
+  
+flow_cytometry_MFI_scaling_10_1 <- flow_cytometry_MFI_10_1 %>%
+  filter(!Group == "Experiment4") %>%
+  dplyr::select(is.numeric) %>%
+  t() %>%
+  scale() %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  rowwise() %>%
+  mutate(average_scale = mean(c_across(contains("V")))) %>%
+  mutate(rowname = as.factor(rowname))
+
+colnames(flow_cytometry_MFI_scaling_10_1) <- c("Group", "Experiment1", "Experiment2", "Experiment3", "Experiment4", "Average")
+
+flow_cytometry_MFI_scaling_10_1_ANOVA <- flow_cytometry_MFI_scaling_10_1 %>%
+  pivot_longer(!Group & !Average)
+
+
+tiff("Figures/phm_MFI_flow_cytometry.tiff", width = 6, height = 4, units = 'in', res = 360, compression = 'none')
+phm_fc_MFI <- pheatmap(flow_cytometry_MFI_scaling_10_1_for_clusters, cluster_col = TRUE, show_colnames = TRUE, annotation_names_row = T, fontsize_col = 8, cutree_rows = 2)
+dev.off()
+```
+
+
+```r
+ANOVA_MFI_flow_cytometry <- aov(value ~ Group, data = flow_cytometry_MFI_scaling_10_1_ANOVA) %>% glht(linfct = mcp(Group = "Tukey")) %>% summary()
+
+ANOVA_MFI_flow_cytometry
+
+aov(value ~ Group, data = flow_cytometry_MFI_scaling_10_1_ANOVA)%>%summary()
+```
+
+
+
+
+```r
+plot_for_bubblegum_fc_MFI_10_1_scaled <- flow_cytometry_MFI_scaling_10_1 %>%
+  pivot_longer(!Group) %>%
+  filter(name == "Average")
+  
+bubblegum_plot_MFI_flow_cytometry_10_1 <- ggplot(plot_for_bubblegum_fc_MFI_10_1_scaled, aes(x = Group, y = name, fill = value, size = value)) +
+  geom_point(alpha = 0.8, shape = 21, stroke = 0) +
+  #geom_hline(yintercept = seq(.5, 4.5, 1), size = .2) +
+  scale_x_discrete(position = "bottom") +
+  scale_radius(range = c(5, 40), breaks = c(-1, 0, 1), labels = c(-1, 0, 1), limits = c(-2, 2)) +
+  scale_fill_gradient(low = "orange", high = "blue", breaks = c(-2, 0, 2), labels = c("Low", "Middle", "High"), limits = c(-2, 2)) +
+  theme_ipsum() +
+  theme(legend.position = "bottom", 
+        panel.grid.major = element_blank(),
+        legend.text = element_text(size = 14, family="Arial"),
+        legend.title = element_text(size = 14, family="Arial"),
+        axis.text = element_text(size = 14, family = "Arial"), axis.text.x=element_text(angle = 45, hjust = 0.9)) +
+  guides(size = guide_legend(override.aes = list(fill = "grey", alpha = 0.5, color = "black", stroke = .25), label.position = "bottom",title.position = "left", order = 1), fill = guide_colorbar(ticks.colour = NA, title.position = "top", order = 2)) +
+  labs(size = "z-scores", fill = "Level of phagocytosis:", x = NULL, y = NULL)
+
+bubblegum_plot_MFI_flow_cytometry_10_1 
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+
+```r
+ggsave("Figures/bg_plot_flow_MFI_norm_total.tiff")
+ggsave("Figures/bg_plot_flow_MFI_norm_total.jpeg")
+```
+
+
+## Supplementary materials. MFI flow cytometry with boxplots 
+
+
+```r
+data_M1_MCSF_GM_CSF_MFI <- read_excel("Database.xlsx", sheet = "MFI_flow_cytometry")
+
+MFI_flow_cytometry_for_boxplot <- data_M1_MCSF_GM_CSF_MFI %>%
+  filter(!Group == "Experiment4") %>%
+  dplyr::select(-Date & -Ratio) %>%
+  pivot_longer(!Group) %>%
+  mutate(name = as.factor(name))
+  
+boxplot_MFI_flow_cytometry <- ggplot(MFI_flow_cytometry_for_boxplot, aes(x = name, y = value, fill = name)) +
+  geom_boxplot(alpha = 0.6) +
+  geom_point(size = 3) +
+  scale_fill_manual(breaks = perc_pos_flow_cytometry_for_boxplot$name,
+                    values = c("purple", "blue", "orange", "red")) +
+  theme(axis.title.x=element_blank(), axis.text.y=element_text(angle=0,hjust=0.5,vjust=0.4, size = 18),
+axis.text.x=element_text(angle=0,hjust=0.5,vjust=0.4, size = 18),
+        legend.text = element_text(size = 18, family="Arial"),
+        legend.title = element_text(size = 18, family="Arial"))
+
+boxplot_MFI_flow_cytometry
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
+
+```r
+model_MFI_flow_cytometry <- aov(value ~ name, data = MFI_flow_cytometry_for_boxplot) %>% glht(linfct = mcp(name = "Tukey")) %>% summary()
+
+model_MFI_flow_cytometry
+
+ggsave("Figures/boxplot_MFI_flow_cytometry.tiff")
+ggsave("Figures/boxplot_MFI_flow_cytometry.jpeg")
+```
+
+
+##Normalized data for fluorescence microscopy - percent
+
+
+```r
+fluor_microscopy_perc <- read_excel("Database.xlsx", sheet = "%pos_f_microscopy")
+
+fluor_microscopy_perc_for_clusters <- fluor_microscopy_perc %>%
+  dplyr::select(is.numeric) %>%
+  t() %>%
+  scale()
+  
+fluor_microscopy_perc_bgplot <- fluor_microscopy_perc %>%
+  dplyr::select(is.numeric) %>%
+  t() %>%
+  scale() %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  rowwise() %>%
+  mutate(average_scale = mean(c_across(contains("V")))) %>%
+  mutate(rowname = as.factor(rowname))
+
+colnames(fluor_microscopy_perc_bgplot) <- c("Group", "Experiment1", "Experiment2", "Experiment3", "Experiment4", "Average")
+
+tiff("Figures/phm_percent_fluorescence_microscopy.tiff", width = 6, height = 4, units = 'in', res = 360, compression = 'none')
+pheatmap(fluor_microscopy_perc_for_clusters, cluster_col = TRUE, show_colnames = TRUE, annotation_names_row = T, fontsize_col = 8, cutree_rows = 2)
+dev.off()
+```
+
+
+
+```r
+fluor_microscopy_perc_bgplot_ANOVA <- fluor_microscopy_perc_bgplot %>%
+  pivot_longer(!Group & !Average)
+
+ANOVA_percent_fluorescence_microscopy <- aov(value ~ Group, data = fluor_microscopy_perc_bgplot_ANOVA) %>% glht(linfct = mcp(Group = "Tukey")) %>% summary()
+
+ANOVA_percent_fluorescence_microscopy
+```
+
+
+
+```r
+fluor_microscopy_perc_bgplot_scaled <- fluor_microscopy_perc_bgplot %>%
+  pivot_longer(!Group) %>%
+  filter(name == "Average")
+  
+bubblegum_plot_perc_f_microscopy <- ggplot(fluor_microscopy_perc_bgplot_scaled, aes(x = Group, y = name, fill = value, size = value)) +
+  geom_point(alpha = 0.8, shape = 21, stroke = 0) +
+  #geom_hline(yintercept = seq(.5, 4.5, 1), size = .2) +
+  scale_x_discrete(position = "bottom") +
+  scale_radius(range = c(5, 40), breaks = c(-1, 0, 1), labels = c(-1, 0, 1), limits = c(-2, 2)) +
+  scale_fill_gradient(low = "orange", high = "blue", breaks = c(-2, 0, 2), labels = c("Low", "Middle", "High"), limits = c(-2, 2)) +
+  theme_ipsum() +
+  theme(legend.position = "bottom", 
+        panel.grid.major = element_blank(),
+        legend.text = element_text(size = 8, family="Optima"),
+        legend.title = element_text(size = 8, family="Optima"),
+        axis.text = element_text(size = 10, family = "Optima"), axis.text.x=element_text(angle = 45, hjust = 0.9)) +
+  guides(size = guide_legend(override.aes = list(fill = "grey", alpha = 0.5, color = "black", stroke = .25), label.position = "bottom",title.position = "right", order = 1), fill = guide_colorbar(ticks.colour = NA, title.position = "top", order = 2)) +
+  labs(size = "z-scores", fill = "Level of phagocytosis:", x = NULL, y = NULL)
+
+bubblegum_plot_perc_f_microscopy
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+
+```r
+ggsave("Figures/bg_plot_percent_fluorescence_microscopy.tiff")
+ggsave("Figures/bg_plot_percent_fluorescence_microscopy.jpeg")
+```
+
+
+## Supplementary materials. percent fluorescence microscopy with boxplots 
+
+
+```r
+data_M1_MCSF_GM_CSF_percent_microscopy <- read_excel("Database.xlsx", sheet = "%pos_f_microscopy")
+
+percent_f_microscopy_for_boxplot <- data_M1_MCSF_GM_CSF_percent_microscopy %>%
+  dplyr::select(-Date & -Ratio) %>%
+  pivot_longer(!Group) %>%
+  mutate(name = as.factor(name))
+  
+boxplot_percent_f_microscopy <- ggplot(percent_f_microscopy_for_boxplot, aes(x = name, y = value, fill = name)) +
+  geom_boxplot(alpha = 0.6) +
+  geom_point(size = 3) +
+  scale_fill_manual(breaks = percent_f_microscopy_for_boxplot$name,
+                    values = c("purple", "blue", "orange", "red")) +
+  theme(axis.title.x=element_blank(), axis.text.y=element_text(angle=0,hjust=0.5,vjust=0.4, size = 18),
+axis.text.x=element_text(angle=0,hjust=0.5,vjust=0.4, size = 18),
+        legend.text = element_text(size = 18, family="Arial"),
+        legend.title = element_text(size = 18, family="Arial"))
+
+boxplot_percent_f_microscopy
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+
+```r
+model_percent_f_microscopy <- aov(value ~ name, data = percent_f_microscopy_for_boxplot) %>% glht(linfct = mcp(name = "Tukey")) %>% summary()
+
+model_percent_f_microscopy
+
+ggsave("Figures/boxplot_percent_f_microscopy.tiff")
+ggsave("Figures/boxplot_percent_f_microscopy.jpeg")
+```
+
+
+## Cytometry*Microscopy correlation
+
+
+```r
+cor_data <- read_excel("Database.xlsx", sheet = "cor_fc_mic")
+
+library(ggcorrplot)
+
+cor_table <- cor_data %>%
+  pivot_wider(., names_from = exp, values_from = c(fc, mic)) %>%
+  dplyr::select(is.numeric)
+
+cor_table_2 <- cor_data %>%
+  dplyr::select(is.numeric)
+
+p.mat = cor_pmat(cor_table)
+
+cor_plot_fc_mic <- ggcorrplot(cor(cor_table), hc.order = FALSE, method = "circle", p.mat = p.mat,
+   outline.col = "white",
+   ggtheme = ggplot2::theme_gray,
+   colors = c("#6D9EC1","white", "#E46726")) +
+  theme(axis.text.x=element_text(angle = 45))
+
+cor_plot_fc_mic
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+
+```r
+ggsave("Figures/cor_table.tiff")
+
+
+cor_plot_fc_mic_2 <- ggcorrplot(cor(cor_table_2), hc.order = TRUE, method = "circle", p.mat = p.mat,
+   outline.col = "white",
+   ggtheme = ggplot2::theme_gray,
+   colors = c("#6D9EC1","white", "#E46726")) +
+  theme(axis.text.x=element_text(angle = 45))
+
+cor_plot_fc_mic_2
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-13-2.png)<!-- -->
+
+```r
+ggplot(cor_data) +
+  geom_point(aes(x = fc, y = mic, color = group, size = exp), alpha = 0.7) +
+  geom_smooth(aes(x = fc, y = mic), method = "lm") +
+  scale_fill_manual(breaks = cor_data$group,
+                    values = c("purple", "blue", "orange", "red")) +
+  theme(axis.title.x=element_blank(), axis.text.y=element_text(angle=0,hjust=0.5,vjust=0.4, size = 16),
+axis.text.x=element_text(angle=0,hjust=0.5,vjust=0.4, size = 16),
+        legend.text = element_text(size = 16, family="Arial"),
+        legend.title = element_text(size = 16, family="Arial"))
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-13-3.png)<!-- -->
+
+```r
+ggsave("Figures/corplot.tiff")
+
+cor_coeff <- cor(cor_data$fc, cor_data$mic, method = "pearson")
+
+cor_coeff
+```
+
