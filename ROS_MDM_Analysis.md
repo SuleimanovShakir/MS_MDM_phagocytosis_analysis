@@ -41,8 +41,16 @@ colnames(flow_cytometry_percents_scaling_10_1) <- c("Group", "Experiment1", "Exp
 flow_cytometry_percents_scaling_10_1_ANOVA <- flow_cytometry_percents_scaling_10_1 %>%
   pivot_longer(!Group & !Average)
 
-tiff("Figures/boxplot_flow_cytometry_percents_norm.tiff", width = 6, height = 4, units = 'in', res = 360, compression = 'none')
 phm_fc_percents <- pheatmap(flow_cytometry_percents_scaling_10_1_for_clusters, cluster_col = TRUE, show_colnames = TRUE, annotation_names_row = T, fontsize_col = 8, cutree_rows = 2)
+
+phm_fc_percents
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-1-1.png)<!-- -->
+
+```r
+tiff("Figures/boxplot_flow_cytometry_percents_norm.tiff", width = 6, height = 4, units = 'in', res = 360, compression = 'none')
+phm_fc_percents
 dev.off()
 ```
 
@@ -152,9 +160,16 @@ colnames(flow_cytometry_MFI_scaling_10_1) <- c("Group", "Experiment1", "Experime
 flow_cytometry_MFI_scaling_10_1_ANOVA <- flow_cytometry_MFI_scaling_10_1 %>%
   pivot_longer(!Group & !Average)
 
-
-tiff("Figures/phm_MFI_flow_cytometry.tiff", width = 6, height = 4, units = 'in', res = 360, compression = 'none')
 phm_fc_MFI <- pheatmap(flow_cytometry_MFI_scaling_10_1_for_clusters, cluster_col = TRUE, show_colnames = TRUE, annotation_names_row = T, fontsize_col = 8, cutree_rows = 2)
+
+phm_fc_MFI
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+
+```r
+tiff("Figures/phm_MFI_flow_cytometry.tiff", width = 6, height = 4, units = 'in', res = 360, compression = 'none')
+phm_fc_MFI
 dev.off()
 ```
 
@@ -261,8 +276,16 @@ fluor_microscopy_perc_bgplot <- fluor_microscopy_perc %>%
 
 colnames(fluor_microscopy_perc_bgplot) <- c("Group", "Experiment1", "Experiment2", "Experiment3", "Experiment4", "Average")
 
+phm_f_microscopy_percent <- pheatmap(fluor_microscopy_perc_for_clusters, cluster_col = TRUE, show_colnames = TRUE, annotation_names_row = T, fontsize_col = 8, cutree_rows = 2)
+
+phm_f_microscopy_percent
+```
+
+![](ROS_MDM_Analysis_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
+
+```r
 tiff("Figures/phm_percent_fluorescence_microscopy.tiff", width = 6, height = 4, units = 'in', res = 360, compression = 'none')
-pheatmap(fluor_microscopy_perc_for_clusters, cluster_col = TRUE, show_colnames = TRUE, annotation_names_row = T, fontsize_col = 8, cutree_rows = 2)
+phm_f_microscopy_percent
 dev.off()
 ```
 
